@@ -190,15 +190,21 @@ def admin_menu(message):
 @bot.message_handler(commands=['addmoney'])
 def add_money(message):
     if message.from_user.id != ADMIN_ID:
-        bot.reply_to(message, "❌ អ្នកមិនមានសិទ្ធិបញ្ចូលលុយទេ!")
         return
+    parts = message.text.split()
+    if len(parts) == 3:
+        process_add_money_step(message, parts[1], parts[2])
+    else:
+        msg = bot.reply_to(message, "📝 សូមបញ្ចូល **[IDភ្ញៀវ]** និង **[ចំនួនលុយ]**\n(ឧទាហរណ៍៖ `123456789 10.5`) ៖", parse_mode="Markdown")
+        bot.register_next_step_handler(msg, lambda m: process_add_money_step(m, *m.text.split()[:2]) if len(m.text.split()) >= 2 else bot.reply_to(m, "❌ ខុសទម្រង់! សូមវាយបញ្ជា /addmoney ម្តងទៀត។"))
+
+def process_add_money_step(message, u_id, amt):
     try:
-        parts = message.text.split()
-        user_id = int(parts[1])
-        amount = float(parts[2])
+        user_id = int(u_id)
+        amount = float(amt)
         
         if user_id == ADMIN_ID:
-            bot.reply_to(message, "❌ អ្នកមិនអាចបញ្ចូលលុយឲ្យខ្លួនឯងក្នុងកាបូបនេះបានទេ ព្រោះលុយអ្នកគឺភ្ជាប់ផ្ទាល់ជាមួយ API ពិតប្រាកដរួចហើយ!")
+            bot.reply_to(message, "❌ អ្នកមិនអាចបញ្ចូលលុយឲ្យខ្លួនឯងក្នុងកាបូបនេះបានទេ!")
             return
             
         add_user_balance(user_id, amount)
@@ -208,20 +214,26 @@ def add_money(message):
         except:
             pass
     except:
-        bot.reply_to(message, "⚠️ ទម្រង់ខុស! ឧទាហរណ៍: `/addmoney 123456789 10.5`")
+        bot.reply_to(message, "⚠️ ទម្រង់ខុស! ឧទាហរណ៍: `123456789 10`")
 
 @bot.message_handler(commands=['removemoney'])
 def remove_money(message):
     if message.from_user.id != ADMIN_ID:
         return
+    parts = message.text.split()
+    if len(parts) == 3:
+        process_remove_money_step(message, parts[1], parts[2])
+    else:
+        msg = bot.reply_to(message, "📝 សូមបញ្ចូល **[IDភ្ញៀវ]** និង **[ចំនួនលុយដែលត្រូវដក]**\n(ឧទាហរណ៍៖ `123456789 5`) ៖", parse_mode="Markdown")
+        bot.register_next_step_handler(msg, lambda m: process_remove_money_step(m, *m.text.split()[:2]) if len(m.text.split()) >= 2 else bot.reply_to(m, "❌ ខុសទម្រង់! សូមធ្វើម្តងទៀត។"))
+
+def process_remove_money_step(message, u_id, amt):
     try:
-        parts = message.text.split()
-        user_id = int(parts[1])
-        amount = float(parts[2])
-        
+        user_id = int(u_id)
+        amount = float(amt)
         current_balance = get_user_balance(user_id)
         if current_balance < amount:
-            bot.reply_to(message, f"❌ ភ្ញៀវនេះមានលុយតែ `${current_balance:.2f}` ទេ មិនអាចដក `${amount:.2f}` បានឡើយ!")
+            bot.reply_to(message, f"❌ ភ្ញៀវនេះមានលុយតែ `${current_balance:.2f}` ទេ!")
             return
             
         if deduct_user_balance(user_id, amount, "ដកលុយដោយ Admin"):
@@ -229,15 +241,22 @@ def remove_money(message):
         else:
             bot.reply_to(message, "❌ មានបញ្ហាក្នុងការដកប្រាក់!")
     except:
-        bot.reply_to(message, "⚠️ ទម្រង់ខុស! ឧទាហរណ៍: `/removemoney 123456789 10.5`")
+        bot.reply_to(message, "⚠️ ទម្រង់ខុស! ឧទាហរណ៍: `123456789 5`")
 
 @bot.message_handler(commands=['history'])
 def check_history(message):
     if message.from_user.id != ADMIN_ID:
         return
+    parts = message.text.split()
+    if len(parts) == 2:
+        process_history_step(message, parts[1])
+    else:
+        msg = bot.reply_to(message, "📝 សូមបញ្ចូល **[IDភ្ញៀវ]** ដើម្បីមើលប្រវត្តិទិញ ៖", parse_mode="Markdown")
+        bot.register_next_step_handler(msg, lambda m: process_history_step(m, m.text.strip()))
+
+def process_history_step(message, u_id):
     try:
-        parts = message.text.split()
-        user_id = int(parts[1])
+        user_id = int(u_id)
         
         conn = sqlite3.connect('database.db')
         c = conn.cursor()
@@ -260,19 +279,26 @@ def check_history(message):
             
         bot.reply_to(message, history_msg, parse_mode="Markdown")
     except:
-        bot.reply_to(message, "⚠️ ទម្រង់ខុស! ឧទាហរណ៍: `/history 123456789`")
+        bot.reply_to(message, "⚠️ ទម្រង់ខុស! ឧទាហរណ៍: `123456789`")
 
 @bot.message_handler(commands=['checkuser'])
 def check_user(message):
     if message.from_user.id != ADMIN_ID:
         return
+    parts = message.text.split()
+    if len(parts) == 2:
+        process_checkuser_step(message, parts[1])
+    else:
+        msg = bot.reply_to(message, "📝 សូមបញ្ចូល **[IDភ្ញៀវ]** ដើម្បីឆែកលុយ ៖", parse_mode="Markdown")
+        bot.register_next_step_handler(msg, lambda m: process_checkuser_step(m, m.text.strip()))
+
+def process_checkuser_step(message, u_id):
     try:
-        parts = message.text.split()
-        user_id = int(parts[1])
+        user_id = int(u_id)
         balance = get_user_balance(user_id)
         bot.reply_to(message, f"👤 **ព័ត៌មានភ្ញៀវ ID `{user_id}`:**\n👛 លុយនៅសល់: `${balance:.2f}`", parse_mode="Markdown")
     except:
-        bot.reply_to(message, "⚠️ ទម្រង់ខុស! ឧទាហរណ៍: `/checkuser 123456789`")
+        bot.reply_to(message, "⚠️ ទម្រង់ខុស! ឧទាហរណ៍: `123456789`")
 
 @bot.message_handler(commands=['apibalance'])
 def check_api_balance(message):
