@@ -336,7 +336,11 @@ def handle_shop_commands(message):
                     
                     markup = InlineKeyboardMarkup()
                     
-                    if original_price < 5:
+                    if original_price < 1:
+                        final_price = original_price * 5.0
+                        caption = f"📦 {name}\n💵 តម្លៃ: ${final_price:.2f} | 📦 ស្តុកមាន: {stock}"
+                        markup.add(InlineKeyboardButton(f"🛒 ទិញឥឡូវនេះ (${final_price:.2f})", callback_data=f"buy_{product_code}_{final_price:.2f}"))
+                    elif 1 <= original_price < 5:
                         final_price = original_price * 3.0
                         caption = f"📦 {name}\n💵 តម្លៃ: ${final_price:.2f} | 📦 ស្តុកមាន: {stock}"
                         markup.add(InlineKeyboardButton(f"🛒 ទិញឥឡូវនេះ (${final_price:.2f})", callback_data=f"buy_{product_code}_{final_price:.2f}"))
