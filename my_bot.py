@@ -375,7 +375,7 @@ def handle_shop_commands(message):
                     else: 
                         final_price = original_price * 2.0 * 0.8 
                         
-                    list_text += f"👉 `/buy_{product_code}` : 📦 {name} | 💵 **${final_price:.2f}** | 📦 ស្តុក: {stock}\n\n"
+                    list_text += f"👉 /buy\_{product_code} : 📦 {name} | 💵 **${final_price:.2f}** | 📦 ស្តុក: {stock}\n\n"
                     
                 final_msg = f"📂 **បញ្ជីទំនិញ: {cat_name}**\n\n{list_text}📌 *ចុចលើលេខកូដបញ្ជាពណ៌ខៀវខាងលើ ដើម្បីទិញទំនិញ!*"
                 sent_msg = bot.send_message(message.chat.id, final_msg, parse_mode="Markdown")
