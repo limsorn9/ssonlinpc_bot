@@ -564,6 +564,15 @@ def redeem_keys(message):
     except Exception as e:
         bot.send_message(message.chat.id, f"មានបញ្ហា៖ {e}")
 
+@app.route('/' + TELEGRAM_BOT_TOKEN, methods=['POST'])
+def getMessage():
+    bot.process_new_updates([telebot.types.Update.de_json(request.stream.read().decode("utf-8"))])
+    return "!", 200
+
+@app.route("/")
+def webhook():
+    return "Bot is running!", 200
+
 if __name__ == '__main__':
     bot.remove_webhook()
     set_bot_commands() # Add commands to Telegram Menu
