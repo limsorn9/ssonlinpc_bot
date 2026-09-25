@@ -355,47 +355,31 @@ def handle_shop_commands(message):
             if selected_cat.lower() in cat_name.lower():
                 found = True
                 products = category.get('products', [])
-                bot.send_message(message.chat.id, f"📂 **ប្រភេទ:** {cat_name}", parse_mode="Markdown")
+                bot.send_message(message.chat.id, f"📂 **ប្រភេទ:** {cat_name}\nកំពុងរៀបចំបញ្ជីទំនិញ... ⏳", parse_mode="Markdown")
                 
-                # បង្ហាញទំនិញនីមួយៗ និងមានប៊ូតុងទិញនៅខាងក្រោម (Max 15)
-                for item in products[:15]: 
+                list_text = ""
+                for item in products[:30]: 
                     product_code = item.get('code')
                     name = item.get('name')
-                    
                     original_price = float(item.get('price', 0))
                     stock = item.get('stock')
                     
-                    markup = InlineKeyboardMarkup()
-                    
                     if original_price < 1:
                         final_price = original_price * 5.0
-                        caption = f"📦 {name}\n💵 តម្លៃ: ${final_price:.2f} | 📦 ស្តុកមាន: {stock}"
-                        markup.add(InlineKeyboardButton(f"🛒 ទិញឥឡូវនេះ (${final_price:.2f})", callback_data=f"buy_{product_code}_{final_price:.2f}"))
                     elif 1 <= original_price < 5:
                         final_price = original_price * 3.0
-                        caption = f"📦 {name}\n💵 តម្លៃ: ${final_price:.2f} | 📦 ស្តុកមាន: {stock}"
-                        markup.add(InlineKeyboardButton(f"🛒 ទិញឥឡូវនេះ (${final_price:.2f})", callback_data=f"buy_{product_code}_{final_price:.2f}"))
                     elif 5 <= original_price <= 10:
                         final_price = original_price * 2.5
-                        caption = f"📦 {name}\n💵 តម្លៃ: ${final_price:.2f} | 📦 ស្តុកមាន: {stock}"
-                        markup.add(InlineKeyboardButton(f"🛒 ទិញឥឡូវនេះ (${final_price:.2f})", callback_data=f"buy_{product_code}_{final_price:.2f}"))
                     elif 10 < original_price <= 50:
-                        base_price = original_price * 2.0
-                        final_price = base_price * 0.9 # បញ្ចុះ 10%
-                        caption = (f"📦 {name}\n"
-                                   f"💵 តម្លៃពេញ: ~${base_price:.2f}~\n"
-                                   f"🎉 **បញ្ចុះតម្លៃ 10% សល់ត្រឹម: ${final_price:.2f}** | 📦 ស្តុកមាន: {stock}")
-                        markup.add(InlineKeyboardButton(f"🛒 ទិញឥឡូវនេះ (${final_price:.2f})", callback_data=f"buy_{product_code}_{final_price:.2f}"))
-                    else: # > 50
-                        base_price = original_price * 2.0
-                        final_price = base_price * 0.8 # បញ្ចុះ 20%
-                        caption = (f"📦 {name}\n"
-                                   f"💵 តម្លៃពេញ: ~${base_price:.2f}~\n"
-                                   f"🎉 **បញ្ចុះតម្លៃ 20% សល់ត្រឹម: ${final_price:.2f}** | 📦 ស្តុកមាន: {stock}")
-                        markup.add(InlineKeyboardButton(f"🛒 ទិញឥឡូវនេះ (${final_price:.2f})", callback_data=f"buy_{product_code}_{final_price:.2f}"))
+                        final_price = original_price * 2.0 * 0.9 
+                    else: 
+                        final_price = original_price * 2.0 * 0.8 
+                        
+                    list_text += f"👉 `/buy_{product_code}` : 📦 {name} | 💵 **${final_price:.2f}** | 📦 ស្តុក: {stock}\n\n"
                     
-                    sent_msg = bot.send_message(message.chat.id, caption, reply_markup=markup, parse_mode="Markdown")
-                    delete_message_later(message.chat.id, sent_msg.message_id, 60) # លុបសារក្រោយ 1 នាទី
+                final_msg = f"📂 **បញ្ជីទំនិញ: {cat_name}**\n\n{list_text}📌 *ចុចលើលេខកូដបញ្ជាពណ៌ខៀវខាងលើ ដើម្បីទិញទំនិញ!*"
+                sent_msg = bot.send_message(message.chat.id, final_msg, parse_mode="Markdown")
+                delete_message_later(message.chat.id, sent_msg.message_id, 120)
                 break
                 
         if not found:
@@ -405,28 +389,56 @@ def handle_shop_commands(message):
         bot.send_message(message.chat.id, f"មានបញ្ហាពេលទាញទិន្នន័យ៖ {e}")
 
 # ----------------- មុខងារទិញ Key -----------------
-@bot.callback_query_handler(func=lambda call: call.data.startswith('buy_'))
-def callback_query(call):
-    data_parts = call.data.split('_')
-    product_code = data_parts[1]
-    sell_price = float(data_parts[2]) 
-    user_id = call.from_user.id
-    
-    if user_id == ADMIN_ID:
-        bot.answer_callback_query(call.id, "កំពុងដំណើរការទិញ (សិទ្ធិ Admin)... សូមរង់ចាំ!")
-    else:
-        user_balance = get_user_balance(user_id)
-        if user_balance < sell_price:
-            bot.answer_callback_query(call.id, f"❌ លុយរបស់អ្នកមិនគ្រប់គ្រាន់ទេ! (មានតែ ${user_balance:.2f})", show_alert=True)
-            return
-            
-        bot.answer_callback_query(call.id, "កំពុងដំណើរការទិញ... សូមរង់ចាំ!")
+@bot.message_handler(func=lambda message: message.text and message.text.startswith('/buy_'))
+def handle_buy_command(message):
+    try:
+        product_code = message.text.split('_')[1].strip()
+    except:
+        return
         
-        if not deduct_user_balance(user_id, sell_price, f"ទិញទំនិញ: {product_code}"):
-            bot.send_message(call.message.chat.id, "❌ មានបញ្ហាក្នុងការកាត់ប្រាក់!")
+    user_id = message.from_user.id
+    bot.send_message(message.chat.id, "កំពុងដំណើរការទិញ... សូមរង់ចាំ! ⏳")
+    
+    try:
+        url = f"{BASE_URL}/key-products?token={API_TOKEN}"
+        response = requests.get(url, timeout=15)
+        data = response.json()
+        categories = data.get('categories', [])
+        
+        target_product = None
+        for category in categories:
+            for item in category.get('products', []):
+                if str(item.get('code')) == product_code:
+                    target_product = item
+                    break
+            if target_product:
+                break
+                
+        if not target_product:
+            bot.send_message(message.chat.id, "❌ រកមិនឃើញទំនិញនេះទេ!")
             return
             
-        bot.send_message(call.message.chat.id, f"⏳ កំពុងទិញទំនិញ... ទឹកប្រាក់ `${sell_price:.2f}` ត្រូវបានកាត់ចេញពីកាបូបរបស់អ្នក។", parse_mode="Markdown")
+        original_price = float(target_product.get('price', 0))
+        if original_price < 1:
+            sell_price = original_price * 5.0
+        elif 1 <= original_price < 5:
+            sell_price = original_price * 3.0
+        elif 5 <= original_price <= 10:
+            sell_price = original_price * 2.5
+        elif 10 < original_price <= 50:
+            sell_price = original_price * 2.0 * 0.9
+        else:
+            sell_price = original_price * 2.0 * 0.8
+            
+        if user_id != ADMIN_ID:
+            user_balance = get_user_balance(user_id)
+            if user_balance < sell_price:
+                bot.send_message(message.chat.id, f"❌ លុយរបស់អ្នកមិនគ្រប់គ្រាន់ទេ! (មានតែ ${user_balance:.2f})")
+                return
+            if not deduct_user_balance(user_id, sell_price, f"ទិញទំនិញ: {product_code}"):
+                bot.send_message(message.chat.id, "❌ មានបញ្ហាក្នុងការកាត់ប្រាក់!")
+                return
+            bot.send_message(message.chat.id, f"⏳ ទឹកប្រាក់ `${sell_price:.2f}` ត្រូវបានកាត់ចេញពីកាបូបរបស់អ្នក។", parse_mode="Markdown")
     
     timestamp_ms = int(time.time() * 1000)
     order_id = f"KP{timestamp_ms}"
@@ -450,21 +462,21 @@ def callback_query(call):
                        f"📦 ទំនិញ: {data.get('name')}\n"
                        f"🔑 **Keys របស់អ្នក:**\n{keys_str}\n\n"
                        f"💰 លុយនៅសល់: `${get_user_balance(user_id):.2f}`")
-            bot.send_message(call.message.chat.id, msg, parse_mode="Markdown")
+            bot.send_message(message.chat.id, msg, parse_mode="Markdown")
         else:
             if user_id != ADMIN_ID:
                 add_user_balance(user_id, sell_price)
             err_msg = (f"❌ **បរាជ័យក្នុងការទិញ!**\n"
                        f"ប្រព័ន្ធកំពុងមានបញ្ហាបច្ចេកទេសបន្តិចបន្តួច (បានបង្វិលលុយសងវិញហើយ)។\n\n"
                        f"💬 សូមទាក់ទងទៅកាន់ Admin ផ្ទាល់ដើម្បីដោះស្រាយបញ្ហានេះ!")
-            bot.send_message(call.message.chat.id, err_msg, parse_mode="Markdown")
+            bot.send_message(message.chat.id, err_msg, parse_mode="Markdown")
     except Exception as e:
         if user_id != ADMIN_ID:
             add_user_balance(user_id, sell_price)
         err_msg = (f"❌ **មានបញ្ហាប្រព័ន្ធពេលកំពុងទិញ!**\n"
                    f"(បានបង្វិលលុយសងវិញហើយ)។\n\n"
                    f"💬 សូមទាក់ទងទៅកាន់ Admin ផ្ទាល់ដើម្បីដោះស្រាយបញ្ហានេះ!")
-        bot.send_message(call.message.chat.id, err_msg, parse_mode="Markdown")
+        bot.send_message(message.chat.id, err_msg, parse_mode="Markdown")
 
 # ----------------- មុខងារផ្សេងៗ -----------------
 @bot.message_handler(commands=['get_cid', 'getcid'])
