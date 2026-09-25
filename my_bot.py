@@ -439,7 +439,11 @@ def handle_buy_command(message):
                 bot.send_message(message.chat.id, "❌ មានបញ្ហាក្នុងការកាត់ប្រាក់!")
                 return
             bot.send_message(message.chat.id, f"⏳ ទឹកប្រាក់ `${sell_price:.2f}` ត្រូវបានកាត់ចេញពីកាបូបរបស់អ្នក។", parse_mode="Markdown")
-    
+            
+    except Exception as e:
+        bot.send_message(message.chat.id, f"❌ មានបញ្ហាក្នុងការទាញទិន្នន័យទំនិញ៖ {e}")
+        return
+        
     timestamp_ms = int(time.time() * 1000)
     order_id = f"KP{timestamp_ms}"
     quantity = 1
