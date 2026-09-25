@@ -137,7 +137,14 @@ def show_info(message):
             balance = 0.0
         msg = (f"👑 **ព័ត៌មាន Admin:**\n\n"
                f"🆔 **Telegram ID:** `{user_id}`\n"
-               f"🏦 **លុយក្នុងកុង API ពិតប្រាកដ:** `${balance:.2f}`")
+               f"🏦 **លុយក្នុងកុង API ពិតប្រាកដ:** `${balance:.2f}`\n\n"
+               f"⚙️ **មុខងារគ្រប់គ្រង (Admin Menu):**\n"
+               f"1. បញ្ចូលលុយ ៖ `/addmoney [ID] [លុយ]`\n"
+               f"2. ដកលុយវិញ ៖ `/removemoney [ID] [លុយ]`\n"
+               f"3. ឆែកលុយភ្ញៀវ៖ `/checkuser [ID]`\n"
+               f"4. ឆែកប្រវត្តិទិញ៖ `/history [ID]`\n"
+               f"5. ឆែកលុយកុងពិត៖ `/apibalance`\n\n"
+               f"*(ឧទាហរណ៍: /addmoney 123456 10.5)*")
         bot.send_message(message.chat.id, msg, parse_mode="Markdown")
         return
 
