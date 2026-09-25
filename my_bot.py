@@ -319,7 +319,12 @@ def check_api_balance(message):
 
 # ----------------- មុខងារ Menu ផលិតផល (Shop) -----------------
 @bot.message_handler(commands=['1', '2', '3', '4', '5', '6', '7', '8', '9'])
+@bot.message_handler(func=lambda message: message.text in ['1', '2', '3', '4', '5', '6', '7', '8', '9'])
 def handle_shop_commands(message):
+    cmd = message.text.strip()
+    if not cmd.startswith('/'):
+        cmd = '/' + cmd
+
     category_map = {
         "/1": "Office Online Key",
         "/2": "Office Bind Key",
@@ -332,9 +337,9 @@ def handle_shop_commands(message):
         "/9": "SQL & Visual Studio Key"
     }
     
-    selected_cat = category_map.get(message.text)
+    selected_cat = category_map.get(cmd)
     if not selected_cat:
-        return 
+        return
         
     bot.send_message(message.chat.id, f"កំពុងទាញយកទំនិញ... ⏳")
     
