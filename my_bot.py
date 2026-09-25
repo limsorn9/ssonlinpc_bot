@@ -8,9 +8,9 @@ import threading
 from flask import Flask, request
 
 # ================= ការកំណត់ទូទៅ =================
-TELEGRAM_BOT_TOKEN = os.environ.get('TELEGRAM_BOT_TOKEN', '') # ត្រូវកំណត់ក្នុង Render 
+TELEGRAM_BOT_TOKEN = os.environ.get('BOT_TOKEN', '') # ត្រូវកំណត់ក្នុង Render 
 API_TOKEN = os.environ.get('API_TOKEN', '') # ត្រូវកំណត់ក្នុង Render
-WEBHOOK_URL = os.environ.get('RENDER_EXTERNAL_URL', 'https://your-app.onrender.com')
+WEBHOOK_URL = os.environ.get('WEBHOOK_URL', os.environ.get('RENDER_EXTERNAL_URL', ''))
 BASE_URL = "https://www.mspidpro.com/api"
 
 ADMIN_ID = 240224709 
