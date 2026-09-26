@@ -6,6 +6,10 @@ import time
 import sqlite3
 import threading
 from flask import Flask, request
+import firebase_admin
+from firebase_admin import credentials
+from firebase_admin import db
+import json
 
 # ================= ការកំណត់ទូទៅ =================
 TELEGRAM_BOT_TOKEN = os.environ.get('BOT_TOKEN', '') # ត្រូវកំណត់ក្នុង Render 
@@ -21,56 +25,68 @@ PROFIT_MULTIPLIER = 2.0
 bot = telebot.TeleBot(TELEGRAM_BOT_TOKEN)
 app = Flask(__name__)
 
-# ================= ប្រព័ន្ធទិន្នន័យ (Database) =================
+# ================= ប្រព័ន្ធទិន្នន័យ (Firebase Database) =================
 def init_db():
-    conn = sqlite3.connect('database.db')
-    c = conn.cursor()
-    c.execute('''CREATE TABLE IF NOT EXISTS users (user_id INTEGER PRIMARY KEY, balance REAL DEFAULT 0)''')
-    c.execute('''CREATE TABLE IF NOT EXISTS transactions (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT, 
-                    user_id INTEGER, 
-                    type TEXT, 
-                    amount REAL, 
-                    description TEXT, 
-                    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP)''')
-    conn.commit()
-    conn.close()
+    if not firebase_admin._apps:
+        cred_json = os.environ.get('FIREBASE_CREDENTIALS')
+        db_url = os.environ.get('FIREBASE_DATABASE_URL')
+        
+        if not cred_json or not db_url:
+            print("⚠️ WARNING: FIREBASE_CREDENTIALS or FIREBASE_DATABASE_URL is missing!")
+            return
+            
+        try:
+            cred_dict = json.loads(cred_json)
+            cred = credentials.Certificate(cred_dict)
+            firebase_admin.initialize_app(cred, {
+                'databaseURL': db_url
+            })
+            print("✅ Firebase Initialized Successfully!")
+        except Exception as e:
+            print("❌ Firebase Init Error:", e)
 
 def log_transaction(user_id, trans_type, amount, description):
-    conn = sqlite3.connect('database.db')
-    c = conn.cursor()
-    c.execute("INSERT INTO transactions (user_id, type, amount, description) VALUES (?, ?, ?, ?)", (user_id, trans_type, amount, description))
-    conn.commit()
-    conn.close()
+    try:
+        ref = db.reference(f'transactions/{user_id}')
+        ref.push({
+            'type': trans_type,
+            'amount': amount,
+            'description': description,
+            'timestamp': int(time.time())
+        })
+    except Exception as e:
+        print("Log error:", e)
 
 def get_user_balance(user_id):
-    conn = sqlite3.connect('database.db')
-    c = conn.cursor()
-    c.execute("SELECT balance FROM users WHERE user_id = ?", (user_id,))
-    result = c.fetchone()
-    conn.close()
-    if result:
-        return result[0]
-    return 0.0
+    try:
+        ref = db.reference(f'users/{user_id}/balance')
+        val = ref.get()
+        return float(val) if val else 0.0
+    except Exception as e:
+        print("Get balance error:", e)
+        return 0.0
 
 def add_user_balance(user_id, amount):
-    conn = sqlite3.connect('database.db')
-    c = conn.cursor()
-    c.execute("INSERT INTO users (user_id, balance) VALUES (?, ?) ON CONFLICT(user_id) DO UPDATE SET balance = balance + ?", (user_id, amount, amount))
-    conn.commit()
-    conn.close()
-    log_transaction(user_id, "TOPUP", amount, "បញ្ចូលលុយដោយ Admin")
+    try:
+        ref = db.reference(f'users/{user_id}')
+        current = get_user_balance(user_id)
+        ref.update({'balance': current + amount})
+        log_transaction(user_id, "TOPUP", amount, "បញ្ចូលលុយដោយ Admin")
+    except Exception as e:
+        print("Add balance error:", e)
 
 def deduct_user_balance(user_id, amount, reason="ដកលុយ"):
-    conn = sqlite3.connect('database.db')
-    c = conn.cursor()
-    c.execute("UPDATE users SET balance = balance - ? WHERE user_id = ? AND balance >= ?", (amount, user_id, amount))
-    success = c.rowcount > 0
-    conn.commit()
-    conn.close()
-    if success:
-        log_transaction(user_id, "DEDUCT", amount, reason)
-    return success
+    try:
+        ref = db.reference(f'users/{user_id}')
+        current = get_user_balance(user_id)
+        if current >= amount:
+            ref.update({'balance': current - amount})
+            log_transaction(user_id, "DEDUCT", amount, reason)
+            return True
+        return False
+    except Exception as e:
+        print("Deduct balance error:", e)
+        return False
 
 init_db()
 
