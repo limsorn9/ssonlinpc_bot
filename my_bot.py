@@ -3,6 +3,11 @@ from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton, BotCommand
 import requests
 import os
 import time
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except Exception:
+    pass
 import sqlite3
 import threading
 from flask import Flask, request
@@ -28,16 +33,27 @@ app = Flask(__name__)
 # ================= ប្រព័ន្ធទិន្នន័យ (Firebase Database) =================
 def init_db():
     if not firebase_admin._apps:
-        cred_json = os.environ.get('FIREBASE_CREDENTIALS')
+        cred_json = os.environ.get('FIREBASE_CREDENTIALS', '').strip()
         db_url = os.environ.get('FIREBASE_DATABASE_URL')
         
-        if not cred_json or not db_url:
-            print("⚠️ WARNING: FIREBASE_CREDENTIALS or FIREBASE_DATABASE_URL is missing!")
+        if not db_url:
+            print("⚠️ WARNING: FIREBASE_DATABASE_URL is missing!")
             return
             
         try:
-            cred_dict = json.loads(cred_json)
-            cred = credentials.Certificate(cred_dict)
+            if cred_json and cred_json.startswith('{'):
+                cred_dict = json.loads(cred_json)
+                cred = credentials.Certificate(cred_dict)
+            elif cred_json and os.path.exists(cred_json):
+                cred = credentials.Certificate(cred_json)
+            elif os.path.exists('firebase-key.json'):
+                cred = credentials.Certificate('firebase-key.json')
+            elif os.path.exists('/root/ssonlinpc_bot/firebase-key.json'):
+                cred = credentials.Certificate('/root/ssonlinpc_bot/firebase-key.json')
+            else:
+                print("⚠️ WARNING: No valid FIREBASE_CREDENTIALS found!")
+                return
+                
             firebase_admin.initialize_app(cred, {
                 'databaseURL': db_url
             })
@@ -581,8 +597,19 @@ def redeem_keys(message):
         bot.send_message(message.chat.id, f"មានបញ្ហា៖ {e}")
 
 if __name__ == '__main__':
-    bot.remove_webhook()
+    try:
+        bot.remove_webhook()
+        time.sleep(1)
+    except Exception:
+        pass
+        
     set_bot_commands() # Add commands to Telegram Menu
-    bot.set_webhook(url=WEBHOOK_URL + '/' + TELEGRAM_BOT_TOKEN)
-    port = int(os.environ.get('PORT', 5000))
-    app.run(host='0.0.0.0', port=port)
+    port = int(os.environ.get('PORT', 5002))
+    
+    if WEBHOOK_URL:
+        bot.set_webhook(url=WEBHOOK_URL + '/' + TELEGRAM_BOT_TOKEN)
+        app.run(host='0.0.0.0', port=port)
+    else:
+        print("🚀 Webhook URL not set -> Running in Polling Mode (VPS)...")
+        threading.Thread(target=lambda: app.run(host='0.0.0.0', port=port), daemon=True).start()
+        bot.infinity_polling(skip_pending=True)

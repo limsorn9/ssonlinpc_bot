@@ -2,3 +2,4 @@ pyTelegramBotAPI
 requests
 Flask
 firebase-admin
+python-dotenv
